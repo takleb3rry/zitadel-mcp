@@ -54,7 +54,7 @@ Portal tools (`portal_*`) are only available when `PORTAL_DATABASE_URL` is confi
 ## Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/zitadel-mcp.git
+git clone https://github.com/takleb3rry/zitadel-mcp.git
 cd zitadel-mcp
 npm install
 npm run build
