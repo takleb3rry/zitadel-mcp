@@ -62,7 +62,10 @@ npm run build
 
 ## Configuration
 
-### Claude Code (`.mcp.json`)
+Add the server to your MCP client config. The JSON block below works for both options:
+
+- **Global** (all projects): `~/.claude.json` under the `"mcpServers"` key
+- **Per-project**: `.mcp.json` in the project root
 
 ```json
 {
@@ -82,6 +85,8 @@ npm run build
   }
 }
 ```
+
+Restart Claude Code after adding the config. The Zitadel tools will appear automatically.
 
 ### Environment Variables
 
