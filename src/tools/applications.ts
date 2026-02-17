@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { ToolDefinition, ToolHandler } from '../types/tools.js';
 import { textResponse, zitadelId } from '../types/tools.js';
-import type { ListAppsResponse, ZitadelApp, CreateOIDCAppResponse } from '../types/zitadel.js';
+import type { ListAppsResponse, ZitadelApp, GetAppResponse, CreateOIDCAppResponse } from '../types/zitadel.js';
 import { logger } from '../utils/logger.js';
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
@@ -130,9 +130,10 @@ const getAppHandler: ToolHandler = async (params, ctx) => {
     appId: zitadelId('appId'),
   }).parse(params);
 
-  const app = await ctx.client.request<ZitadelApp>(
+  const response = await ctx.client.request<GetAppResponse>(
     `/management/v1/projects/${input.projectId}/apps/${input.appId}`
   );
+  const app = response.app;
 
   const lines = [
     `Application: ${app.name}`,
@@ -221,7 +222,7 @@ const updateAppHandler: ToolHandler = async (params, ctx) => {
   if (input.devMode !== undefined) body['devMode'] = input.devMode;
 
   await ctx.client.request(
-    `/management/v1/projects/${input.projectId}/apps/${input.appId}/oidc`,
+    `/management/v1/projects/${input.projectId}/apps/${input.appId}/oidc_config`,
     { method: 'PUT', body: JSON.stringify(body) }
   );
 
