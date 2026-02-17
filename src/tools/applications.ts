@@ -88,6 +88,9 @@ export const APPLICATION_TOOLS: ToolDefinition[] = [
         redirectUris: { type: 'array', items: { type: 'string' }, description: 'Updated redirect URIs' },
         postLogoutRedirectUris: { type: 'array', items: { type: 'string' }, description: 'Updated post-logout URIs' },
         devMode: { type: 'boolean', description: 'Enable/disable dev mode' },
+        accessTokenRoleAssertion: { type: 'boolean', description: 'Include user roles in access tokens' },
+        idTokenRoleAssertion: { type: 'boolean', description: 'Include user roles in ID tokens' },
+        idTokenUserinfoAssertion: { type: 'boolean', description: 'Include user info (name, email) in ID tokens' },
       },
       required: ['projectId', 'appId'],
     },
@@ -152,6 +155,9 @@ const getAppHandler: ToolHandler = async (params, ctx) => {
       `Response Types: ${(oidc.responseTypes || []).join(', ')}`,
       `Grant Types: ${(oidc.grantTypes || []).join(', ')}`,
       `Dev Mode: ${oidc.devMode ?? false}`,
+      `Access Token Role Assertion: ${oidc.accessTokenRoleAssertion ?? false}`,
+      `ID Token Role Assertion: ${oidc.idTokenRoleAssertion ?? false}`,
+      `ID Token Userinfo Assertion: ${oidc.idTokenUserinfoAssertion ?? false}`,
     );
   }
 
@@ -214,12 +220,29 @@ const updateAppHandler: ToolHandler = async (params, ctx) => {
     redirectUris: z.array(z.string()).optional(),
     postLogoutRedirectUris: z.array(z.string()).optional(),
     devMode: z.boolean().optional(),
+    accessTokenRoleAssertion: z.boolean().optional(),
+    idTokenRoleAssertion: z.boolean().optional(),
+    idTokenUserinfoAssertion: z.boolean().optional(),
   }).parse(params);
 
-  const body: Record<string, unknown> = {};
-  if (input.redirectUris) body['redirectUris'] = input.redirectUris;
-  if (input.postLogoutRedirectUris) body['postLogoutRedirectUris'] = input.postLogoutRedirectUris;
-  if (input.devMode !== undefined) body['devMode'] = input.devMode;
+  // Fetch current config first — PUT replaces the entire OIDC config
+  const current = await ctx.client.request<GetAppResponse>(
+    `/management/v1/projects/${input.projectId}/apps/${input.appId}`
+  );
+  const oidc = current.app.oidcConfig;
+
+  const body: Record<string, unknown> = {
+    redirectUris: input.redirectUris ?? oidc?.redirectUris,
+    responseTypes: oidc?.responseTypes,
+    grantTypes: oidc?.grantTypes,
+    appType: oidc?.appType,
+    authMethodType: oidc?.authMethodType,
+    postLogoutRedirectUris: input.postLogoutRedirectUris ?? oidc?.postLogoutRedirectUris,
+    devMode: input.devMode ?? oidc?.devMode ?? false,
+    accessTokenRoleAssertion: input.accessTokenRoleAssertion ?? oidc?.accessTokenRoleAssertion ?? false,
+    idTokenRoleAssertion: input.idTokenRoleAssertion ?? oidc?.idTokenRoleAssertion ?? false,
+    idTokenUserinfoAssertion: input.idTokenUserinfoAssertion ?? oidc?.idTokenUserinfoAssertion ?? false,
+  };
 
   await ctx.client.request(
     `/management/v1/projects/${input.projectId}/apps/${input.appId}/oidc_config`,

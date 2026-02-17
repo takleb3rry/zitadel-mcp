@@ -127,6 +127,10 @@ export interface ListProjectsResponse {
   result: ZitadelProject[];
 }
 
+export interface GetProjectResponse {
+  project: ZitadelProject;
+}
+
 export interface CreateProjectRequest {
   name: string;
   projectRoleAssertion?: boolean;
@@ -151,6 +155,9 @@ export interface OIDCConfig {
   authMethodType: string;
   postLogoutRedirectUris?: string[];
   devMode?: boolean;
+  accessTokenRoleAssertion?: boolean;
+  idTokenRoleAssertion?: boolean;
+  idTokenUserinfoAssertion?: boolean;
 }
 
 export interface ZitadelApp {

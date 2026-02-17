@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { ToolDefinition, ToolHandler, HandlerContext } from '../types/tools.js';
 import { textResponse, errorResponse, zitadelId } from '../types/tools.js';
-import type { ListUsersResponse, CreateUserResponse, ZitadelUserDetails } from '../types/zitadel.js';
+import type { ListUsersResponse, CreateUserResponse, ZitadelUserDetails, GetUserResponse } from '../types/zitadel.js';
 import { logger } from '../utils/logger.js';
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
@@ -85,6 +85,45 @@ export const USER_TOOLS: ToolDefinition[] = [
     _meta: { readOnly: false, domain: 'users' },
     annotations: { title: 'Reactivate User', readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
+  {
+    name: 'zitadel_lock_user',
+    description: 'Lock a user account. The user will not be able to log in until unlocked.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string', description: 'The Zitadel user ID to lock' },
+      },
+      required: ['userId'],
+    },
+    _meta: { readOnly: false, domain: 'users' },
+    annotations: { title: 'Lock User', readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+  },
+  {
+    name: 'zitadel_unlock_user',
+    description: 'Unlock a previously locked user account.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string', description: 'The Zitadel user ID to unlock' },
+      },
+      required: ['userId'],
+    },
+    _meta: { readOnly: false, domain: 'users' },
+    annotations: { title: 'Unlock User', readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  },
+  {
+    name: 'zitadel_delete_user',
+    description: 'Permanently delete a user. This action cannot be undone.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'string', description: 'The Zitadel user ID to delete' },
+      },
+      required: ['userId'],
+    },
+    _meta: { readOnly: false, domain: 'users' },
+    annotations: { title: 'Delete User', readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  },
 ];
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -132,10 +171,8 @@ const listUsersHandler: ToolHandler = async (params, ctx) => {
 const getUserHandler: ToolHandler = async (params, ctx) => {
   const { userId } = z.object({ userId: zitadelId('userId') }).parse(params);
 
-  const response = await ctx.client.request<ZitadelUserDetails>(`/v2/users/${userId}`);
-
-  // v2 GET returns user fields directly (not nested under .user)
-  const u = response;
+  const response = await ctx.client.request<GetUserResponse>(`/v2/users/${userId}`);
+  const u = response.user;
   const name = u.human?.profile
     ? `${u.human.profile.givenName} ${u.human.profile.familyName}`.trim()
     : u.username;
@@ -200,6 +237,27 @@ const reactivateUserHandler: ToolHandler = async (params, ctx) => {
   return textResponse(`User ${userId} has been reactivated.`);
 };
 
+const lockUserHandler: ToolHandler = async (params, ctx) => {
+  const { userId } = z.object({ userId: zitadelId('userId') }).parse(params);
+
+  await ctx.client.request(`/v2/users/${userId}/lock`, { method: 'POST' });
+  return textResponse(`User ${userId} has been locked.`);
+};
+
+const unlockUserHandler: ToolHandler = async (params, ctx) => {
+  const { userId } = z.object({ userId: zitadelId('userId') }).parse(params);
+
+  await ctx.client.request(`/v2/users/${userId}/unlock`, { method: 'POST' });
+  return textResponse(`User ${userId} has been unlocked.`);
+};
+
+const deleteUserHandler: ToolHandler = async (params, ctx) => {
+  const { userId } = z.object({ userId: zitadelId('userId') }).parse(params);
+
+  await ctx.client.request(`/v2/users/${userId}`, { method: 'DELETE' });
+  return textResponse(`User ${userId} has been permanently deleted.`);
+};
+
 // ─── Export ──────────────────────────────────────────────────────────────────
 
 export const USER_HANDLERS: Record<string, ToolHandler> = {
@@ -208,4 +266,7 @@ export const USER_HANDLERS: Record<string, ToolHandler> = {
   zitadel_create_user: createUserHandler,
   zitadel_deactivate_user: deactivateUserHandler,
   zitadel_reactivate_user: reactivateUserHandler,
+  zitadel_lock_user: lockUserHandler,
+  zitadel_unlock_user: unlockUserHandler,
+  zitadel_delete_user: deleteUserHandler,
 };

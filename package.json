@@ -1,6 +1,6 @@
 {
   "name": "zitadel-mcp-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP server for Zitadel identity management — manage users, projects, apps, roles, and service accounts",
   "type": "module",
   "main": "build/index.js",

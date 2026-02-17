@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { ToolDefinition, ToolHandler } from '../types/tools.js';
 import { textResponse, zitadelId } from '../types/tools.js';
-import type { ZitadelApp } from '../types/zitadel.js';
+import type { GetAppResponse } from '../types/zitadel.js';
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
 
@@ -35,9 +35,10 @@ const getAuthConfigHandler: ToolHandler = async (params, ctx) => {
     appId: zitadelId('appId'),
   }).parse(params);
 
-  const app = await ctx.client.request<ZitadelApp>(
+  const response = await ctx.client.request<GetAppResponse>(
     `/management/v1/projects/${input.projectId}/apps/${input.appId}`
   );
+  const app = response.app;
 
   const clientId = app.oidcConfig?.clientId || 'UNKNOWN';
   const config = ctx.client.getConfig();

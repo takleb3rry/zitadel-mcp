@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import type { ToolDefinition, ToolHandler } from '../types/tools.js';
 import { textResponse, zitadelId } from '../types/tools.js';
-import type { ListProjectsResponse, ZitadelProject, CreateProjectResponse } from '../types/zitadel.js';
+import type { ListProjectsResponse, ZitadelProject, GetProjectResponse, CreateProjectResponse } from '../types/zitadel.js';
 import { logger } from '../utils/logger.js';
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
@@ -86,7 +86,8 @@ const listProjectsHandler: ToolHandler = async (params, ctx) => {
 const getProjectHandler: ToolHandler = async (params, ctx) => {
   const { projectId } = z.object({ projectId: zitadelId('projectId') }).parse(params);
 
-  const project = await ctx.client.request<ZitadelProject>(`/management/v1/projects/${projectId}`);
+  const response = await ctx.client.request<GetProjectResponse>(`/management/v1/projects/${projectId}`);
+  const project = response.project;
 
   const lines = [
     `Project: ${project.name}`,
