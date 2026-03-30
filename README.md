@@ -60,6 +60,10 @@ npm install
 npm run build
 ```
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/takleb3rry-zitadel-mcp).
+
 ## Configuration
 
 Add the server to your MCP client config. The JSON block below works for both options:
