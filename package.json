@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.3.1",
     "jose": "^5.0.0",
     "postgres": "^3.4.0",
     "zod": "^3.22.0"
