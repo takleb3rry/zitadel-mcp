@@ -246,6 +246,24 @@ export interface CreateUserGrantResponse {
   details: ResourceDetails;
 }
 
+// ─── Authorizations (Role Assignments) — v2 ──────────────────────────────────
+// Zitadel renamed "User Grant" → "Authorization / Role Assignment". The v2
+// AuthorizationService.CreateAuthorization returns `id` (the authorization id),
+// which is the SAME aggregate id as a v1 user grant — so an id obtained here can
+// be removed via the v1 grant DELETE endpoint and vice versa.
+
+export interface CreateAuthorizationRequest {
+  userId: string;
+  projectId: string;
+  organizationId?: string;
+  roleKeys: string[];
+}
+
+export interface CreateAuthorizationResponse {
+  id: string;
+  creationDate?: string;
+}
+
 // ─── Service Accounts (Machine Users) ────────────────────────────────────────
 
 export interface CreateMachineUserRequest {
@@ -295,4 +313,36 @@ export interface GetOrgResponse {
 export interface ListOrgsResponse {
   details: ListDetails;
   result: ZitadelOrg[];
+}
+
+// ─── Org Members (Managers / Administrators) ─────────────────────────────────
+// "Manager roles" (ORG_OWNER, ORG_USER_MANAGER, …) are distinct from project
+// (business) roles. They grant the ability to administer Zitadel itself and do
+// NOT appear in the OIDC token. Managed via Management API v1 org-member endpoints.
+
+export interface OrgMember {
+  userId: string;
+  roles: string[];
+  preferredLoginName?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  userType?: string;
+  userResourceOwner?: string;
+  details?: ResourceDetails;
+}
+
+export interface ListOrgMembersResponse {
+  details: ListDetails;
+  result: OrgMember[];
+}
+
+export interface ListOrgMemberRolesResponse {
+  result: string[];
+}
+
+export interface AddOrgMemberResponse {
+  details: ResourceDetails;
 }

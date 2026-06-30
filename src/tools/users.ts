@@ -46,13 +46,14 @@ export const USER_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'zitadel_create_user',
-    description: 'Create a new human user in Zitadel. An invitation email will be sent automatically so the user can set their password.',
+    description: 'Create a new human user in Zitadel. An invitation email will be sent automatically so the user can set their password. Optionally supply your own userId for idempotent retries (a re-create then conflicts cleanly).',
     inputSchema: {
       type: 'object',
       properties: {
         email: { type: 'string', description: 'Email address for the new user' },
         firstName: { type: 'string', description: 'First name' },
         lastName: { type: 'string', description: 'Last name' },
+        userId: { type: 'string', description: 'Optional client-supplied user ID for idempotency (Zitadel generates one if omitted)' },
       },
       required: ['email', 'firstName', 'lastName'],
     },
@@ -194,32 +195,55 @@ const getUserHandler: ToolHandler = async (params, ctx) => {
   return textResponse(lines.join('\n'));
 };
 
+/**
+ * Find a human user by exact email address. Returns the first match or null.
+ * Used for idempotent provisioning (pre-check by email before create).
+ */
+export async function findUserByEmail(ctx: HandlerContext, email: string): Promise<ZitadelUserDetails | null> {
+  const response = await ctx.client.request<ListUsersResponse>('/v2/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      query: { offset: '0', limit: 2 },
+      queries: [{ emailQuery: { emailAddress: email, method: 'TEXT_QUERY_METHOD_EQUALS_IGNORE_CASE' } }],
+    }),
+  });
+  const users = response.result || [];
+  return users.find((u) => u.human?.email?.email?.toLowerCase() === email.toLowerCase()) || users[0] || null;
+}
+
+/** Create a human user via the v2 API; returns the new user id. Supports a client-supplied userId. */
+export async function createHumanUser(
+  ctx: HandlerContext,
+  args: { email: string; firstName: string; lastName: string; userId?: string }
+): Promise<string> {
+  const body: Record<string, unknown> = {
+    profile: { givenName: args.firstName, familyName: args.lastName },
+    email: { email: args.email, isVerified: false },
+  };
+  if (args.userId) body['userId'] = args.userId;
+
+  const response = await ctx.client.request<CreateUserResponse>('/v2/users/human', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return response.userId;
+}
+
 const createUserHandler: ToolHandler = async (params, ctx) => {
   const input = z.object({
     email: z.string().email().max(320),
     firstName: z.string().min(1).max(200),
     lastName: z.string().min(1).max(200),
+    userId: zitadelId('userId').optional(),
   }).parse(params);
 
   logger.info('Creating user');
 
-  const response = await ctx.client.request<CreateUserResponse>('/v2/users/human', {
-    method: 'POST',
-    body: JSON.stringify({
-      profile: {
-        givenName: input.firstName,
-        familyName: input.lastName,
-      },
-      email: {
-        email: input.email,
-        isVerified: false,
-      },
-    }),
-  });
+  const userId = await createHumanUser(ctx, input);
 
   return textResponse(
     `User created successfully.\n` +
-    `User ID: ${response.userId}\n` +
+    `User ID: ${userId}\n` +
     `Email: ${input.email}\n` +
     `Name: ${input.firstName} ${input.lastName}\n\n` +
     `An invitation email has been sent to ${input.email} to complete registration.`

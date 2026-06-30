@@ -168,18 +168,26 @@ export class ZitadelClient {
         this.clearTokenCache();
       }
 
-      // Return generic message — don't leak Zitadel API internals
+      // Return generic message — don't leak Zitadel API internals.
+      // The numeric status is attached (err.status) so callers can branch on it
+      // (e.g. 404 → fall back to a v1 endpoint, 403 → degrade gracefully) without
+      // parsing the message string. The status itself is not sensitive.
       const status = response.status;
+      let message: string;
       if (status === 404) {
-        throw new Error('The requested resource was not found.');
+        message = 'The requested resource was not found.';
+      } else if (status === 403) {
+        message = 'Permission denied for this operation.';
+      } else if (status === 409) {
+        message = 'A conflict occurred — the resource may already exist.';
+      } else if (status === 429) {
+        message = 'Rate limit exceeded. Please try again later.';
+      } else {
+        message = `Operation failed (HTTP ${status}). Check server logs for details.`;
       }
-      if (status === 409) {
-        throw new Error('A conflict occurred — the resource may already exist.');
-      }
-      if (status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.');
-      }
-      throw new Error(`Operation failed (HTTP ${status}). Check server logs for details.`);
+      const err = new Error(message) as Error & { status?: number };
+      err.status = status;
+      throw err;
     }
 
     // Handle empty responses (e.g. DELETE operations)

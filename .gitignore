@@ -7,3 +7,4 @@ build/
 # Local smoke-test / debug scripts — machine-specific paths & infra IDs, not committed
 auth-smoketest.mjs
 mcp-handshake-test.mjs
+verify-sso-live.mjs

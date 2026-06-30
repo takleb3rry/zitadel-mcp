@@ -4,7 +4,15 @@
  * Manage users, projects, apps, roles, and service accounts via the Model Context Protocol
  */
 
-import 'dotenv/config';
+import { config as loadDotenv } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+// Load .env from the repo root (one level up from build/ or src/) so secrets can
+// live in a gitignored .env regardless of the process working directory. Existing
+// process env vars take precedence (override: false), so an inline MCP `env` block
+// still wins during migration.
+loadDotenv({ path: join(dirname(fileURLToPath(import.meta.url)), '..', '.env') });
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -30,7 +38,7 @@ async function main() {
   const handlers = getHandlers(config);
 
   const server = new Server(
-    { name: 'zitadel-mcp-server', version: '1.0.0' },
+    { name: 'zitadel-mcp-server', version: '1.1.0' },
     { capabilities: { tools: {} } }
   );
 

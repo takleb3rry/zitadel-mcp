@@ -17,7 +17,7 @@ export interface ToolAnnotations {
 
 export interface ToolMeta {
   readOnly?: boolean;
-  domain: 'users' | 'projects' | 'applications' | 'roles' | 'service-accounts' | 'organizations' | 'utility' | 'portal';
+  domain: 'users' | 'projects' | 'applications' | 'roles' | 'service-accounts' | 'organizations' | 'utility' | 'portal' | 'provisioning';
 }
 
 export interface ToolDefinition {
