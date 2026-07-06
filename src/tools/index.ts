@@ -11,6 +11,7 @@ import { SERVICE_ACCOUNT_TOOLS, SERVICE_ACCOUNT_HANDLERS } from './service-accou
 import { ORG_TOOLS, ORG_HANDLERS } from './organizations.js';
 import { ORG_MEMBER_TOOLS, ORG_MEMBER_HANDLERS } from './org-members.js';
 import { PROVISIONING_TOOLS, PROVISIONING_HANDLERS } from './provisioning.js';
+import { LOGIN_POLICY_TOOLS, LOGIN_POLICY_HANDLERS } from './login-policy.js';
 import { UTILITY_TOOLS, UTILITY_HANDLERS } from './utility.js';
 import { PORTAL_TOOLS, PORTAL_HANDLERS } from './portal.js';
 import type { ToolDefinition, ToolHandler } from '../types/tools.js';
@@ -27,6 +28,7 @@ export function getTools(config: ZitadelConfig): ToolDefinition[] {
     ...ORG_TOOLS,
     ...ORG_MEMBER_TOOLS,
     ...PROVISIONING_TOOLS,
+    ...LOGIN_POLICY_TOOLS,
     ...UTILITY_TOOLS,
   ];
 
@@ -47,6 +49,7 @@ export function getHandlers(config: ZitadelConfig): Record<string, ToolHandler> 
     ...ORG_HANDLERS,
     ...ORG_MEMBER_HANDLERS,
     ...PROVISIONING_HANDLERS,
+    ...LOGIN_POLICY_HANDLERS,
     ...UTILITY_HANDLERS,
   };
 

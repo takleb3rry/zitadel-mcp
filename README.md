@@ -5,7 +5,7 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server for [
 > *"Provision jane@example.com as an Admin."*
 > — One tool call: creates the user, assigns the `admin` project role (v2 authorization), and grants `ORG_USER_MANAGER` so she can manage other users — no Super Admin required.
 
-## Tools (33)
+## Tools (35)
 
 | Category | Tool | Description |
 |----------|------|-------------|
@@ -22,8 +22,8 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server for [
 | | `zitadel_create_project` | Create project |
 | **Applications** | `zitadel_list_apps` | List apps in a project |
 | | `zitadel_get_app` | Get app details + Client ID |
-| | `zitadel_create_oidc_app` | Create OIDC application |
-| | `zitadel_update_app` | Update app (redirect URIs, etc.) |
+| | `zitadel_create_oidc_app` | Create OIDC application (incl. `grantTypes` / `responseTypes` / `accessTokenType`) |
+| | `zitadel_update_app` | Update app (redirect URIs, `accessTokenType`, etc.) |
 | **Roles** | `zitadel_list_project_roles` | List roles in a project |
 | | `zitadel_create_project_role` | Create a role (standardized: `admin`/`standard`) |
 | | `zitadel_list_user_grants` | List user's role grants |
@@ -39,6 +39,8 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server for [
 | | `zitadel_create_service_user_key` | Generate key pair |
 | | `zitadel_list_service_user_keys` | List keys (metadata only) |
 | **Organizations** | `zitadel_get_org` | Get current org details |
+| **Login Policy** | `zitadel_get_login_policy` | Get the org login policy (self-registration on/off, custom vs. inherited) |
+| | `zitadel_set_self_registration` | Enable/disable self-registration (`allowRegister`) for the org — idempotent |
 | **Utility** | `zitadel_get_auth_config` | Get .env.local template for an app |
 | **Portal** | `portal_register_app` | Register app in portal DB |
 | | `portal_setup_full_app` | One-click: Zitadel + portal setup |

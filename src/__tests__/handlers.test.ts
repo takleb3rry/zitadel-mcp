@@ -235,6 +235,135 @@ describe('application handlers', () => {
         )
       ).rejects.toThrow();
     });
+
+    it('passes provided grantTypes + responseTypes to the API', async () => {
+      (ctx.client.request as any).mockResolvedValue({
+        appId: 'app-2',
+        clientId: 'client-2',
+      });
+
+      await APPLICATION_HANDLERS['zitadel_create_oidc_app']!(
+        {
+          projectId: 'p1',
+          name: 'Test',
+          redirectUris: ['https://app.test/cb'],
+          grantTypes: ['OIDC_GRANT_TYPE_AUTHORIZATION_CODE', 'OIDC_GRANT_TYPE_REFRESH_TOKEN'],
+          responseTypes: ['OIDC_RESPONSE_TYPE_CODE'],
+        },
+        ctx
+      );
+
+      const [, options] = (ctx.client.request as any).mock.calls[0];
+      const body = JSON.parse(options.body);
+      expect(body.grantTypes).toEqual([
+        'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+        'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+      ]);
+      expect(body.responseTypes).toEqual(['OIDC_RESPONSE_TYPE_CODE']);
+    });
+
+    it('defaults grantTypes to authorization_code when omitted', async () => {
+      (ctx.client.request as any).mockResolvedValue({ appId: 'app-3', clientId: 'client-3' });
+
+      await APPLICATION_HANDLERS['zitadel_create_oidc_app']!(
+        { projectId: 'p1', name: 'Test', redirectUris: ['https://app.test/cb'] },
+        ctx
+      );
+
+      const [, options] = (ctx.client.request as any).mock.calls[0];
+      const body = JSON.parse(options.body);
+      expect(body.grantTypes).toEqual(['OIDC_GRANT_TYPE_AUTHORIZATION_CODE']);
+      expect(body.responseTypes).toEqual(['OIDC_RESPONSE_TYPE_CODE']);
+    });
+  });
+
+  describe('zitadel_update_app', () => {
+    it('replaces grantTypes when provided and preserves untouched fields', async () => {
+      (ctx.client.request as any)
+        .mockResolvedValueOnce({
+          app: {
+            id: 'a1',
+            name: 'Existing',
+            oidcConfig: {
+              clientId: 'c1',
+              redirectUris: ['https://app.test/cb'],
+              responseTypes: ['OIDC_RESPONSE_TYPE_CODE'],
+              grantTypes: ['OIDC_GRANT_TYPE_AUTHORIZATION_CODE'],
+              appType: 'OIDC_APP_TYPE_WEB',
+              authMethodType: 'OIDC_AUTH_METHOD_TYPE_NONE',
+              devMode: false,
+              accessTokenRoleAssertion: true,
+            },
+          },
+        })
+        .mockResolvedValueOnce({});
+
+      await APPLICATION_HANDLERS['zitadel_update_app']!(
+        {
+          projectId: 'p1',
+          appId: 'a1',
+          grantTypes: [
+            'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+            'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+          ],
+        },
+        ctx
+      );
+
+      const putCall = (ctx.client.request as any).mock.calls[1];
+      const body = JSON.parse(putCall[1].body);
+      expect(body.grantTypes).toEqual([
+        'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+        'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+      ]);
+      // Preserved from current config
+      expect(body.responseTypes).toEqual(['OIDC_RESPONSE_TYPE_CODE']);
+      expect(body.redirectUris).toEqual(['https://app.test/cb']);
+      expect(body.accessTokenRoleAssertion).toBe(true);
+    });
+
+    it('preserves current grantTypes when omitted', async () => {
+      (ctx.client.request as any)
+        .mockResolvedValueOnce({
+          app: {
+            id: 'a1',
+            name: 'Existing',
+            oidcConfig: {
+              clientId: 'c1',
+              redirectUris: ['https://app.test/cb'],
+              responseTypes: ['OIDC_RESPONSE_TYPE_CODE'],
+              grantTypes: [
+                'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+                'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+              ],
+              appType: 'OIDC_APP_TYPE_WEB',
+              authMethodType: 'OIDC_AUTH_METHOD_TYPE_NONE',
+            },
+          },
+        })
+        .mockResolvedValueOnce({});
+
+      await APPLICATION_HANDLERS['zitadel_update_app']!(
+        { projectId: 'p1', appId: 'a1', devMode: true },
+        ctx
+      );
+
+      const body = JSON.parse((ctx.client.request as any).mock.calls[1][1].body);
+      expect(body.grantTypes).toEqual([
+        'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+        'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+      ]);
+      expect(body.devMode).toBe(true);
+    });
+
+    it('rejects unknown grant type values', async () => {
+      await expect(
+        APPLICATION_HANDLERS['zitadel_update_app']!(
+          { projectId: 'p1', appId: 'a1', grantTypes: ['NOT_A_REAL_GRANT'] },
+          ctx
+        )
+      ).rejects.toThrow();
+    });
   });
 });
 

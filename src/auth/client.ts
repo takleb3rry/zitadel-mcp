@@ -53,12 +53,21 @@ export class ZitadelClient {
 
     const { serviceAccountPrivateKey } = this.config;
 
-    // Decode the base64-encoded private key
-    let privateKeyPem: string;
-    try {
-      privateKeyPem = Buffer.from(serviceAccountPrivateKey, 'base64').toString('utf-8');
-    } catch {
-      privateKeyPem = serviceAccountPrivateKey;
+    // Accept either a raw PEM or a base64-encoded PEM. Base64 decoding never throws,
+    // so a raw PEM run through Buffer.from(_, 'base64') is silently corrupted into
+    // non-PEM bytes — detect a PEM up front instead of relying on try/catch.
+    let privateKeyPem = serviceAccountPrivateKey;
+    if (!privateKeyPem.includes('BEGIN')) {
+      const decoded = Buffer.from(serviceAccountPrivateKey, 'base64').toString('utf-8');
+      if (decoded.includes('BEGIN')) {
+        privateKeyPem = decoded;
+      }
+    }
+
+    // Restore real newlines when the PEM was stored single-line with escaped "\n"
+    // (e.g. the JSON key's "key" field pasted verbatim into an unquoted env var).
+    if (privateKeyPem.includes('\\n')) {
+      privateKeyPem = privateKeyPem.replace(/\\n/g, '\n');
     }
 
     // Convert PKCS#1 to PKCS#8 if needed (jose requires PKCS#8)

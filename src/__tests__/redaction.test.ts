@@ -10,6 +10,9 @@ const REDACTED_FIELDS = new Set([
   'name', 'displayName', 'description', 'query',
   'redirectUris', 'postLogoutRedirectUris',
   'appUrl', 'iconUrl', 'slug',
+  'roleKey', 'roleKeys',
+  'accessTokenType',
+  'expirationDate',
 ]);
 
 function redactArgs(args: Record<string, unknown>): Record<string, unknown> {
@@ -38,7 +41,7 @@ describe('redactArgs', () => {
     expect(result['userName']).toBe('[REDACTED]');
   });
 
-  it('redacts name, displayName, description, query', () => {
+  it('redacts name, displayName, description, query, roleKey', () => {
     const result = redactArgs({
       name: 'My Secret App',
       displayName: 'Admin Role',
@@ -50,7 +53,7 @@ describe('redactArgs', () => {
     expect(result['displayName']).toBe('[REDACTED]');
     expect(result['description']).toBe('[REDACTED]');
     expect(result['query']).toBe('[REDACTED]');
-    expect(result['roleKey']).toBe('admin');
+    expect(result['roleKey']).toBe('[REDACTED]');
   });
 
   it('redacts slug', () => {
@@ -80,7 +83,6 @@ describe('redactArgs', () => {
     const result = redactArgs({
       projectId: 'p1',
       appId: 'a1',
-      roleKey: 'admin',
       limit: 50,
       userId: 'u1',
       grantId: 'g1',
@@ -88,7 +90,6 @@ describe('redactArgs', () => {
     });
     expect(result['projectId']).toBe('p1');
     expect(result['appId']).toBe('a1');
-    expect(result['roleKey']).toBe('admin');
     expect(result['limit']).toBe(50);
     expect(result['userId']).toBe('u1');
     expect(result['grantId']).toBe('g1');

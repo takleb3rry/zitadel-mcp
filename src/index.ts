@@ -54,6 +54,9 @@ async function main() {
     'name', 'displayName', 'description', 'query',
     'redirectUris', 'postLogoutRedirectUris',
     'appUrl', 'iconUrl', 'slug',
+    'roleKey', 'roleKeys',
+    'accessTokenType',
+    'expirationDate',
   ]);
 
   function redactArgs(args: Record<string, unknown>): Record<string, unknown> {

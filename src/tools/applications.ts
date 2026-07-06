@@ -67,6 +67,37 @@ export const APPLICATION_TOOLS: ToolDefinition[] = [
           enum: ['OIDC_AUTH_METHOD_TYPE_BASIC', 'OIDC_AUTH_METHOD_TYPE_POST', 'OIDC_AUTH_METHOD_TYPE_NONE', 'OIDC_AUTH_METHOD_TYPE_PRIVATE_KEY_JWT'],
           description: 'Auth method. Use NONE for PKCE public clients (default: OIDC_AUTH_METHOD_TYPE_NONE)',
         },
+        grantTypes: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+              'OIDC_GRANT_TYPE_IMPLICIT',
+              'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+              'OIDC_GRANT_TYPE_DEVICE_CODE',
+              'OIDC_GRANT_TYPE_TOKEN_EXCHANGE',
+            ],
+          },
+          description: 'OAuth grant types (default: [OIDC_GRANT_TYPE_AUTHORIZATION_CODE]). Include OIDC_GRANT_TYPE_REFRESH_TOKEN to issue refresh tokens.',
+        },
+        responseTypes: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'OIDC_RESPONSE_TYPE_CODE',
+              'OIDC_RESPONSE_TYPE_ID_TOKEN',
+              'OIDC_RESPONSE_TYPE_ID_TOKEN_TOKEN',
+            ],
+          },
+          description: 'OIDC response types (default: [OIDC_RESPONSE_TYPE_CODE]).',
+        },
+        accessTokenType: {
+          type: 'string',
+          enum: ['OIDC_TOKEN_TYPE_BEARER', 'OIDC_TOKEN_TYPE_JWT'],
+          description: 'Access token format. OIDC_TOKEN_TYPE_JWT issues self-contained JWTs validatable via JWKS; OIDC_TOKEN_TYPE_BEARER issues opaque reference tokens. Default OIDC_TOKEN_TYPE_BEARER. Use JWT for resource servers that validate tokens locally (e.g., agentgateway).',
+        },
         devMode: {
           type: 'boolean',
           description: 'Enable dev mode to allow http:// redirect URIs (default: false)',
@@ -79,7 +110,7 @@ export const APPLICATION_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'zitadel_update_app',
-    description: 'Update an OIDC application\'s configuration (redirect URIs, auth method, etc.).',
+    description: 'Update an OIDC application\'s configuration (redirect URIs, auth method, grant types, etc.).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -87,6 +118,37 @@ export const APPLICATION_TOOLS: ToolDefinition[] = [
         appId: { type: 'string', description: 'The application ID to update' },
         redirectUris: { type: 'array', items: { type: 'string' }, description: 'Updated redirect URIs' },
         postLogoutRedirectUris: { type: 'array', items: { type: 'string' }, description: 'Updated post-logout URIs' },
+        grantTypes: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+              'OIDC_GRANT_TYPE_IMPLICIT',
+              'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+              'OIDC_GRANT_TYPE_DEVICE_CODE',
+              'OIDC_GRANT_TYPE_TOKEN_EXCHANGE',
+            ],
+          },
+          description: 'Replace OAuth grant types (omit to keep current). Include OIDC_GRANT_TYPE_REFRESH_TOKEN to enable refresh tokens.',
+        },
+        responseTypes: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: [
+              'OIDC_RESPONSE_TYPE_CODE',
+              'OIDC_RESPONSE_TYPE_ID_TOKEN',
+              'OIDC_RESPONSE_TYPE_ID_TOKEN_TOKEN',
+            ],
+          },
+          description: 'Replace OIDC response types (omit to keep current).',
+        },
+        accessTokenType: {
+          type: 'string',
+          enum: ['OIDC_TOKEN_TYPE_BEARER', 'OIDC_TOKEN_TYPE_JWT'],
+          description: 'Change access token format. OIDC_TOKEN_TYPE_JWT issues self-contained JWTs (validatable via JWKS); OIDC_TOKEN_TYPE_BEARER issues opaque reference tokens. Omit to keep current.',
+        },
         devMode: { type: 'boolean', description: 'Enable/disable dev mode' },
         accessTokenRoleAssertion: { type: 'boolean', description: 'Include user roles in access tokens' },
         idTokenRoleAssertion: { type: 'boolean', description: 'Include user roles in ID tokens' },
@@ -154,6 +216,7 @@ const getAppHandler: ToolHandler = async (params, ctx) => {
       `Post-Logout URIs: ${(oidc.postLogoutRedirectUris || []).join(', ') || 'none'}`,
       `Response Types: ${(oidc.responseTypes || []).join(', ')}`,
       `Grant Types: ${(oidc.grantTypes || []).join(', ')}`,
+      `Access Token Type: ${oidc.accessTokenType || 'OIDC_TOKEN_TYPE_BEARER (default)'}`,
       `Dev Mode: ${oidc.devMode ?? false}`,
       `Access Token Role Assertion: ${oidc.accessTokenRoleAssertion ?? false}`,
       `ID Token Role Assertion: ${oidc.idTokenRoleAssertion ?? false}`,
@@ -166,6 +229,22 @@ const getAppHandler: ToolHandler = async (params, ctx) => {
   return textResponse(lines.join('\n'));
 };
 
+const GRANT_TYPE_VALUES = [
+  'OIDC_GRANT_TYPE_AUTHORIZATION_CODE',
+  'OIDC_GRANT_TYPE_IMPLICIT',
+  'OIDC_GRANT_TYPE_REFRESH_TOKEN',
+  'OIDC_GRANT_TYPE_DEVICE_CODE',
+  'OIDC_GRANT_TYPE_TOKEN_EXCHANGE',
+] as const;
+
+const RESPONSE_TYPE_VALUES = [
+  'OIDC_RESPONSE_TYPE_CODE',
+  'OIDC_RESPONSE_TYPE_ID_TOKEN',
+  'OIDC_RESPONSE_TYPE_ID_TOKEN_TOKEN',
+] as const;
+
+const ACCESS_TOKEN_TYPE_VALUES = ['OIDC_TOKEN_TYPE_BEARER', 'OIDC_TOKEN_TYPE_JWT'] as const;
+
 const createOIDCAppHandler: ToolHandler = async (params, ctx) => {
   const input = z.object({
     projectId: zitadelId('projectId'),
@@ -174,6 +253,9 @@ const createOIDCAppHandler: ToolHandler = async (params, ctx) => {
     postLogoutRedirectUris: z.array(z.string().url().max(2000)).max(20).optional(),
     appType: z.string().max(50).default('OIDC_APP_TYPE_WEB'),
     authMethodType: z.string().max(50).default('OIDC_AUTH_METHOD_TYPE_NONE'),
+    grantTypes: z.array(z.enum(GRANT_TYPE_VALUES)).min(1).max(5).default(['OIDC_GRANT_TYPE_AUTHORIZATION_CODE']),
+    responseTypes: z.array(z.enum(RESPONSE_TYPE_VALUES)).min(1).max(3).default(['OIDC_RESPONSE_TYPE_CODE']),
+    accessTokenType: z.enum(ACCESS_TOKEN_TYPE_VALUES).optional(),
     devMode: z.boolean().default(false),
   }).parse(params);
 
@@ -186,12 +268,15 @@ const createOIDCAppHandler: ToolHandler = async (params, ctx) => {
       body: JSON.stringify({
         name: input.name,
         redirectUris: input.redirectUris,
-        responseTypes: ['OIDC_RESPONSE_TYPE_CODE'],
-        grantTypes: ['OIDC_GRANT_TYPE_AUTHORIZATION_CODE'],
+        responseTypes: input.responseTypes,
+        grantTypes: input.grantTypes,
         appType: input.appType,
         authMethodType: input.authMethodType,
         postLogoutRedirectUris: input.postLogoutRedirectUris,
         devMode: input.devMode,
+        // Only send accessTokenType when caller specified it; let Zitadel default
+        // (bearer) apply otherwise. Including it as undefined trips the API.
+        ...(input.accessTokenType ? { accessTokenType: input.accessTokenType } : {}),
       }),
     }
   );
@@ -218,8 +303,11 @@ const updateAppHandler: ToolHandler = async (params, ctx) => {
   const input = z.object({
     projectId: zitadelId('projectId'),
     appId: zitadelId('appId'),
-    redirectUris: z.array(z.string().max(2000)).max(20).optional(),
-    postLogoutRedirectUris: z.array(z.string().max(2000)).max(20).optional(),
+    redirectUris: z.array(z.string().url().max(2000)).max(20).optional(),
+    postLogoutRedirectUris: z.array(z.string().url().max(2000)).max(20).optional(),
+    grantTypes: z.array(z.enum(GRANT_TYPE_VALUES)).min(1).max(5).optional(),
+    responseTypes: z.array(z.enum(RESPONSE_TYPE_VALUES)).min(1).max(3).optional(),
+    accessTokenType: z.enum(ACCESS_TOKEN_TYPE_VALUES).optional(),
     devMode: z.boolean().optional(),
     accessTokenRoleAssertion: z.boolean().optional(),
     idTokenRoleAssertion: z.boolean().optional(),
@@ -234,12 +322,13 @@ const updateAppHandler: ToolHandler = async (params, ctx) => {
 
   const body: Record<string, unknown> = {
     redirectUris: input.redirectUris ?? oidc?.redirectUris,
-    responseTypes: oidc?.responseTypes,
-    grantTypes: oidc?.grantTypes,
+    responseTypes: input.responseTypes ?? oidc?.responseTypes,
+    grantTypes: input.grantTypes ?? oidc?.grantTypes,
     appType: oidc?.appType,
     authMethodType: oidc?.authMethodType,
     postLogoutRedirectUris: input.postLogoutRedirectUris ?? oidc?.postLogoutRedirectUris,
     devMode: input.devMode ?? oidc?.devMode ?? false,
+    accessTokenType: input.accessTokenType ?? oidc?.accessTokenType,
     accessTokenRoleAssertion: input.accessTokenRoleAssertion ?? oidc?.accessTokenRoleAssertion ?? false,
     idTokenRoleAssertion: input.idTokenRoleAssertion ?? oidc?.idTokenRoleAssertion ?? false,
     idTokenUserinfoAssertion: input.idTokenUserinfoAssertion ?? oidc?.idTokenUserinfoAssertion ?? false,
