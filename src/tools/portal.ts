@@ -9,7 +9,7 @@
 import { z } from 'zod';
 import postgres from 'postgres';
 import type { ToolDefinition, ToolHandler } from '../types/tools.js';
-import { textResponse, errorResponse } from '../types/tools.js';
+import { textResponse, errorResponse, zitadelId } from '../types/tools.js';
 import type { CreateProjectResponse, CreateOIDCAppResponse } from '../types/zitadel.js';
 import { logger } from '../utils/logger.js';
 
@@ -126,7 +126,7 @@ const portalSetupFullAppHandler: ToolHandler = async (params, ctx) => {
     appUrl: z.string().url().max(2000),
     description: z.string().max(1000).optional(),
     iconUrl: z.string().url().max(2000).optional(),
-    projectId: z.string().max(200).optional(),
+    projectId: zitadelId('projectId').optional(),
     redirectUris: z.array(z.string().max(2000)).optional(),
     devMode: z.boolean().default(false),
   }).parse(params);

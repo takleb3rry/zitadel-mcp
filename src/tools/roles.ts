@@ -110,7 +110,8 @@ export function resolveProjectId(params: Record<string, unknown>, ctx: { config:
   if (!projectId) {
     throw new Error('projectId is required — either pass it as a parameter or set ZITADEL_PROJECT_ID');
   }
-  return projectId;
+  // Validate whichever source won (param or env) — the value is interpolated into API paths
+  return zitadelId('projectId').parse(projectId);
 }
 
 /** All role keys defined on a project (used to validate before granting). */
