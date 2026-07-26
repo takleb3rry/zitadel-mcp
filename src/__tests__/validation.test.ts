@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { zitadelId } from '../types/tools.js';
+import { resolveProjectId } from '../tools/roles.js';
 
 describe('zitadelId validator', () => {
   const schema = z.object({ id: zitadelId('testId') });
@@ -55,5 +56,29 @@ describe('zitadelId validator', () => {
   it('uses custom label in error messages', () => {
     const userSchema = z.object({ userId: zitadelId('userId') });
     expect(() => userSchema.parse({ userId: '' })).toThrow('userId');
+  });
+});
+
+describe('resolveProjectId', () => {
+  const ctx = { config: { projectId: 'default-proj-1' } };
+
+  it('returns the param projectId when provided', () => {
+    expect(resolveProjectId({ projectId: 'proj-42' }, ctx)).toBe('proj-42');
+  });
+
+  it('falls back to the configured default project', () => {
+    expect(resolveProjectId({}, ctx)).toBe('default-proj-1');
+  });
+
+  it('throws when no projectId is available', () => {
+    expect(() => resolveProjectId({}, { config: {} })).toThrow('projectId is required');
+  });
+
+  it('rejects path traversal in the param projectId', () => {
+    expect(() => resolveProjectId({ projectId: '../../admin/v1/orgs/_search' }, ctx)).toThrow('alphanumeric');
+  });
+
+  it('rejects path traversal in the configured default projectId', () => {
+    expect(() => resolveProjectId({}, { config: { projectId: 'a/../b' } })).toThrow('alphanumeric');
   });
 });

@@ -59,6 +59,19 @@ describe('loadConfig', () => {
     expect(() => loadConfig()).toThrow('valid URL');
   });
 
+  it('rejects http:// ZITADEL_ISSUER for non-localhost hosts', () => {
+    Object.assign(process.env, { ...VALID_ENV, ZITADEL_ISSUER: 'http://my-instance.zitadel.cloud' });
+
+    expect(() => loadConfig()).toThrow('https');
+  });
+
+  it('accepts http:// ZITADEL_ISSUER for localhost', () => {
+    for (const issuer of ['http://localhost:8080', 'http://127.0.0.1:8080']) {
+      Object.assign(process.env, { ...VALID_ENV, ZITADEL_ISSUER: issuer });
+      expect(loadConfig().issuer).toBe(issuer);
+    }
+  });
+
   it('accepts optional projectId', () => {
     Object.assign(process.env, { ...VALID_ENV, ZITADEL_PROJECT_ID: 'proj-123' });
     const config = loadConfig();
