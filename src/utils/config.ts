@@ -5,7 +5,13 @@
 import { z } from 'zod';
 
 const configSchema = z.object({
-  issuer: z.string().url('ZITADEL_ISSUER must be a valid URL'),
+  issuer: z.string()
+    .url('ZITADEL_ISSUER must be a valid URL')
+    .refine((value) => {
+      const url = new URL(value);
+      return url.protocol === 'https:'
+        || (url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname));
+    }, 'ZITADEL_ISSUER must use https:// (http:// is only allowed for localhost)'),
   serviceAccountUserId: z.string().min(1, 'ZITADEL_SERVICE_ACCOUNT_USER_ID is required'),
   serviceAccountKeyId: z.string().min(1, 'ZITADEL_SERVICE_ACCOUNT_KEY_ID is required'),
   serviceAccountPrivateKey: z.string().min(1, 'ZITADEL_SERVICE_ACCOUNT_PRIVATE_KEY is required'),
