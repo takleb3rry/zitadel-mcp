@@ -122,12 +122,12 @@ Restart Claude Code after adding the config. The Zitadel tools will appear autom
 **This server has admin-level access to your Zitadel instance.** Understand what that means before using it:
 
 - The service account needs org-level management rights. Empirically (Zitadel Cloud, verified 2026-06): `ORG_USER_MANAGER` is enough to **create users and assign existing project roles**, but **`ORG_OWNER` is required** to create project roles, manage org-manager grants (the no-super-admin pattern), and manage applications. For the full provisioning workload, give the service account `ORG_OWNER`; human Admins can stay at `ORG_USER_MANAGER`. Keep the key in a gitignored `.env` (not a shared dotfile) and use `ZITADEL_READ_ONLY=true` for non-mutating sessions.
-- When you create an OIDC app (`zitadel_create_oidc_app`), the **client secret** is returned in the tool response. It is only available at creation time. The AI assistant (and its conversation history) will see it — save it immediately and treat it as sensitive.
-- When you generate a service account key (`zitadel_create_service_user_key`), the **full private key** is returned in the tool response. Same caveat: save it, and be aware it's visible in your MCP client's conversation.
+- When you create an OIDC app (`zitadel_create_oidc_app`) as a confidential client, the **client secret is NOT returned** in the tool response (so it never enters the AI conversation). Retrieve it from the Zitadel Console: Project → Apps → Configuration → Regenerate Client Secret.
+- When you generate a service account key (`zitadel_create_service_user_key`), the private key is **written to `~/.zitadel-mcp/keys/` (file mode 600)** instead of being returned in the tool response — only the file path appears in the conversation.
 - All tool arguments containing PII (email, name, URLs) are **redacted from debug logs**. IDs and tool names are still logged.
 - All Zitadel IDs are validated against an alphanumeric format before being used in API paths.
 
-> **Note for new users:** I've scanned all source files in this repo and found nothing notable, but I always recommend you have your own AI or tooling audit the code before installing any MCP server that gets access to your infrastructure. The full source is ~800 lines of TypeScript — a quick review shouldn't take long.
+> **Note for new users:** always audit the source yourself (or with your own tooling) before installing any MCP server that gets admin access to your infrastructure — and re-audit every update before applying it. Do not take this README's word for it.
 
 ## Development
 
