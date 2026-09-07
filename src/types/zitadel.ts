@@ -155,9 +155,12 @@ export interface OIDCConfig {
   authMethodType: string;
   postLogoutRedirectUris?: string[];
   devMode?: boolean;
+  accessTokenType?: string;
   accessTokenRoleAssertion?: boolean;
   idTokenRoleAssertion?: boolean;
   idTokenUserinfoAssertion?: boolean;
+  clockSkew?: string;
+  additionalOrigins?: string[];
 }
 
 export interface ZitadelApp {

@@ -232,6 +232,10 @@ const updateAppHandler: ToolHandler = async (params, ctx) => {
   );
   const oidc = current.app.oidcConfig;
 
+  // The oidc_config PUT replaces the ENTIRE config, so every field omitted here
+  // is reset to its proto default. Preserve fields this tool does not manage —
+  // notably accessTokenType (dropping it silently reverts JWT apps to opaque
+  // bearer tokens, breaking JWT-verifying resource servers).
   const body: Record<string, unknown> = {
     redirectUris: input.redirectUris ?? oidc?.redirectUris,
     responseTypes: oidc?.responseTypes,
@@ -240,9 +244,12 @@ const updateAppHandler: ToolHandler = async (params, ctx) => {
     authMethodType: oidc?.authMethodType,
     postLogoutRedirectUris: input.postLogoutRedirectUris ?? oidc?.postLogoutRedirectUris,
     devMode: input.devMode ?? oidc?.devMode ?? false,
+    accessTokenType: oidc?.accessTokenType,
     accessTokenRoleAssertion: input.accessTokenRoleAssertion ?? oidc?.accessTokenRoleAssertion ?? false,
     idTokenRoleAssertion: input.idTokenRoleAssertion ?? oidc?.idTokenRoleAssertion ?? false,
     idTokenUserinfoAssertion: input.idTokenUserinfoAssertion ?? oidc?.idTokenUserinfoAssertion ?? false,
+    clockSkew: oidc?.clockSkew,
+    additionalOrigins: oidc?.additionalOrigins,
   };
 
   await ctx.client.request(

@@ -236,6 +236,39 @@ describe('application handlers', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('zitadel_update_app', () => {
+    it('preserves accessTokenType when only redirect URIs change', async () => {
+      const req = ctx.client.request as any;
+      req.mockResolvedValueOnce({
+        app: {
+          oidcConfig: {
+            clientId: 'c1',
+            redirectUris: ['https://old/callback'],
+            responseTypes: ['OIDC_RESPONSE_TYPE_CODE'],
+            grantTypes: ['OIDC_GRANT_TYPE_AUTHORIZATION_CODE'],
+            appType: 'OIDC_APP_TYPE_WEB',
+            authMethodType: 'OIDC_AUTH_METHOD_TYPE_NONE',
+            accessTokenType: 'OIDC_TOKEN_TYPE_JWT',
+            clockSkew: '0s',
+            additionalOrigins: ['https://extra'],
+          },
+        },
+      });
+      req.mockResolvedValueOnce({});
+
+      await APPLICATION_HANDLERS['zitadel_update_app']!(
+        { projectId: 'p1', appId: 'a1', redirectUris: ['https://new/callback'] },
+        ctx
+      );
+
+      const putCall = req.mock.calls[1];
+      const body = JSON.parse(putCall[1].body);
+      expect(body.accessTokenType).toBe('OIDC_TOKEN_TYPE_JWT');
+      expect(body.redirectUris).toEqual(['https://new/callback']);
+      expect(body.additionalOrigins).toEqual(['https://extra']);
+    });
+  });
 });
 
 // ─── Role handlers ────────────────────────────────────────────────────────────
