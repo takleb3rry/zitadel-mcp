@@ -4,6 +4,20 @@ All notable changes to `zitadel-mcp-server` are documented here. Format loosely 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Notification message text tools** — customize the e-mails ZITADEL sends itself ("Verify
+  Email", "Initialize User", "Password Reset", …), which the login text tools do not reach:
+  - `zitadel_get_message_text` — read a message type for one language and show, per field,
+    whether this level overrides it or inherits it (`GET /{management|admin}/v1/text/message/{type}/{language}`).
+  - `zitadel_set_message_text` — override individual fields (`PUT` on the same path). The
+    endpoint replaces the whole row and drops every field sent empty, so the tool reads this
+    level's own overrides first and merges the requested fields in; inherited text is never
+    written back as an override, and `""` clears a single field.
+  - Both default to the configured org; `level: "instance"` uses the Admin API.
+
 ## [2.0.0] - 2026-09-27
 
 First release since `1.0.2` (February 2026). It collects seven months of changes, several of

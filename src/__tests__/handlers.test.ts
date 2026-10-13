@@ -13,6 +13,7 @@ import { ROLE_HANDLERS } from '../tools/roles.js';
 import { SERVICE_ACCOUNT_HANDLERS } from '../tools/service-accounts.js';
 import { ORG_HANDLERS } from '../tools/organizations.js';
 import { LOGIN_TEXTS_HANDLERS } from '../tools/login-texts.js';
+import { MESSAGE_TEXT_HANDLERS } from '../tools/message-texts.js';
 import { UTILITY_HANDLERS } from '../tools/utility.js';
 
 // ─── Mock setup ───────────────────────────────────────────────────────────────
@@ -677,6 +678,123 @@ describe('hosted login translation handlers', () => {
     it('rejects an empty translations map', async () => {
       await expect(
         LOGIN_TEXTS_HANDLERS['zitadel_set_hosted_login_translation']!({ locale: 'de', translations: {} }, ctx)
+      ).rejects.toThrow();
+      expect((ctx.client.request as any).mock.calls.length).toBe(0);
+    });
+  });
+});
+
+// ─── Notification message text handlers ─────────────────────────────────────
+
+describe('message text handlers', () => {
+  let ctx: HandlerContext;
+
+  beforeEach(() => {
+    ctx = createMockContext();
+  });
+
+  describe('zitadel_get_message_text', () => {
+    it('reads the org-level text via the Management API and marks overrides vs. inherited fields', async () => {
+      (ctx.client.request as any).mockResolvedValue({
+        customText: { subject: 'Ihr Code: {{.Code}}', isDefault: false },
+      });
+
+      const result = await MESSAGE_TEXT_HANDLERS['zitadel_get_message_text']!({ type: 'verifyemail', language: 'de' }, ctx);
+
+      expect((ctx.client.request as any).mock.calls[0][0]).toBe('/management/v1/text/message/verifyemail/de');
+      const text = result.content[0]!.text;
+      expect(text).toContain('subject = Ihr Code: {{.Code}}  (override)');
+      expect(text).toContain('text  (inherits)');
+    });
+
+    it('shows the inherited text when the level stores nothing', async () => {
+      (ctx.client.request as any).mockResolvedValue({
+        customText: { subject: 'Verify email', text: 'A new email has been added.', isDefault: true },
+      });
+
+      const result = await MESSAGE_TEXT_HANDLERS['zitadel_get_message_text']!(
+        { type: 'verifyemail', language: 'en', level: 'instance' },
+        ctx
+      );
+
+      expect((ctx.client.request as any).mock.calls[0][0]).toBe('/admin/v1/text/message/verifyemail/en');
+      expect(result.content[0]!.text).toContain('No "verifyemail" message text overrides');
+      expect(result.content[0]!.text).toContain('text = A new email has been added.');
+    });
+
+    it('rejects an unknown message type', async () => {
+      await expect(
+        MESSAGE_TEXT_HANDLERS['zitadel_get_message_text']!({ type: 'verify_email', language: 'de' }, ctx)
+      ).rejects.toThrow();
+      expect((ctx.client.request as any).mock.calls.length).toBe(0);
+    });
+  });
+
+  describe('zitadel_set_message_text', () => {
+    it('keeps this level\'s other overrides and PUTs the full row', async () => {
+      (ctx.client.request as any)
+        .mockResolvedValueOnce({ customText: { footerText: 'keep me', isDefault: false } })
+        .mockResolvedValueOnce({});
+
+      const result = await MESSAGE_TEXT_HANDLERS['zitadel_set_message_text']!(
+        { type: 'verifyemail', language: 'de', subject: 'Ihr Bestätigungscode: {{.Code}}', buttonText: 'E-Mail-Adresse bestätigen' },
+        ctx
+      );
+
+      const [putPath, putOpts] = (ctx.client.request as any).mock.calls[1];
+      expect(putPath).toBe('/management/v1/text/message/verifyemail/de');
+      expect(putOpts.method).toBe('PUT');
+      const body = JSON.parse(putOpts.body);
+      expect(body).toEqual({
+        language: 'de',
+        title: '',
+        preHeader: '',
+        subject: 'Ihr Bestätigungscode: {{.Code}}',
+        greeting: '',
+        text: '',
+        buttonText: 'E-Mail-Adresse bestätigen',
+        footerText: 'keep me',
+      });
+      expect(result.content[0]!.text).toContain('ORG-level');
+    });
+
+    it('never writes inherited text back as an override', async () => {
+      (ctx.client.request as any)
+        .mockResolvedValueOnce({ customText: { subject: 'Verify email', text: 'A new email has been added.', isDefault: true } })
+        .mockResolvedValueOnce({});
+
+      await MESSAGE_TEXT_HANDLERS['zitadel_set_message_text']!(
+        { type: 'verifyemail', language: 'en', level: 'instance', greeting: 'Hello {{.DisplayName}},' },
+        ctx
+      );
+
+      const [putPath, putOpts] = (ctx.client.request as any).mock.calls[1];
+      expect(putPath).toBe('/admin/v1/text/message/verifyemail/en');
+      const body = JSON.parse(putOpts.body);
+      expect(body.greeting).toBe('Hello {{.DisplayName}},');
+      expect(body.subject).toBe('');
+      expect(body.text).toBe('');
+    });
+
+    it('clears a field when passed an empty string', async () => {
+      (ctx.client.request as any)
+        .mockResolvedValueOnce({ customText: { subject: 'old', text: 'keep', isDefault: false } })
+        .mockResolvedValueOnce({});
+
+      const result = await MESSAGE_TEXT_HANDLERS['zitadel_set_message_text']!(
+        { type: 'verifyemail', language: 'de', subject: '' },
+        ctx
+      );
+
+      const body = JSON.parse((ctx.client.request as any).mock.calls[1][1].body);
+      expect(body.subject).toBe('');
+      expect(body.text).toBe('keep');
+      expect(result.content[0]!.text).toContain('subject  (cleared — inherits)');
+    });
+
+    it('rejects a call without any field', async () => {
+      await expect(
+        MESSAGE_TEXT_HANDLERS['zitadel_set_message_text']!({ type: 'verifyemail', language: 'de' }, ctx)
       ).rejects.toThrow();
       expect((ctx.client.request as any).mock.calls.length).toBe(0);
     });

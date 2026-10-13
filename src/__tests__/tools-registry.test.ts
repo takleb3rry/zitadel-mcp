@@ -20,6 +20,7 @@ import {
   LOGIN_POLICY_WRITE_HANDLERS,
 } from '../tools/login-policy.js';
 import { LOGIN_TEXTS_TOOLS, LOGIN_TEXTS_HANDLERS } from '../tools/login-texts.js';
+import { MESSAGE_TEXT_TOOLS, MESSAGE_TEXT_HANDLERS } from '../tools/message-texts.js';
 import { getTools, getHandlers } from '../tools/index.js';
 import type { ZitadelConfig } from '../utils/config.js';
 import type { ToolDefinition } from '../types/tools.js';
@@ -38,16 +39,17 @@ const ALL_MODULES = [
   { name: 'login-policy', tools: LOGIN_POLICY_TOOLS, handlers: LOGIN_POLICY_HANDLERS },
   { name: 'login-policy-write', tools: LOGIN_POLICY_WRITE_TOOLS, handlers: LOGIN_POLICY_WRITE_HANDLERS },
   { name: 'login-texts', tools: LOGIN_TEXTS_TOOLS, handlers: LOGIN_TEXTS_HANDLERS },
+  { name: 'message-texts', tools: MESSAGE_TEXT_TOOLS, handlers: MESSAGE_TEXT_HANDLERS },
 ];
 
 describe('tool registry', () => {
-  it('has 37 total tools', () => {
+  it('has 39 total tools', () => {
     // 8 user + 3 project + 4 application + 5 role + 3 service-account + 1 org
     // + 4 org-member + 2 provisioning + 1 utility + 2 portal
-    // + 1 login-policy (read) + 1 login-policy (write, gated) + 2 login-texts = 37
+    // + 1 login-policy (read) + 1 login-policy (write, gated) + 2 login-texts + 2 message-texts = 39
     // (zitadel_list_orgs removed in REM-22 — uses Admin API, violates least-privilege)
     const total = ALL_MODULES.reduce((sum, m) => sum + m.tools.length, 0);
-    expect(total).toBe(37);
+    expect(total).toBe(39);
   });
 
   it('has no duplicate tool names', () => {
